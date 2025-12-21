@@ -1,0 +1,21 @@
+{"motor_izquierdo": {
+    "pin_dirA": "P8_07",
+    "pin_dirB": "P8_08",
+    "pin_pwm": "P9_14",
+    "pin_encoder": "P9_18",
+    "frequency": 0.25
+  },
+
+    "motor_derecho": {
+        "pin_dirA": "P8_09",
+        "pin_dirB": "P8_10",
+        "pin_pwm": "P9_16",
+        "pin_encoder": "P9_25",
+        "frequency": 0.25
+    },
+
+    "sensor_ultrasonido": {
+        "pin_trigger": "P8_36",
+        "pin_echo": "P9_17"
+    }
+ } 

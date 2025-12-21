@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title> Robot Maria y Okeolesandra </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>    
+    <style>
+        body { font-family: sans-serif; text-align: center; background-color: #f7e5e5; color: rgb(90, 2, 64); touch-action: manipulation; }
+        .container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; max-width: 300px; margin: 50px auto; }
+        button { padding: 30px; font-size: 30px; border-radius: 10px; border: none; background: #dac0c0; color: white; touch-action: manipulation; }
+        button:active { background: #df7edf; }
+        .hidden { visibility: hidden; }
+        #status { margin-top: 20px; color: lime; }
+    </style>
+</head>
+<body>
+    <h1>Robot Maria y Okeolesandra</h1>
+    <h3 id="status">Conectando...</h3>
+    
+    <input type="range" min="0" max="2000" value="50" id="speedSlider" onchange="sendSpeed(this.value)">
+    <p>Velocidad: <span id="speedVal">1000</span>%</p>
+
+    <div class="container">
+        <button class="hidden"></button>
+        <button ontouchstart="sendCommand('adelante')" onmousedown="sendCommand('adelante')" 
+                ontouchend="sendCommand('stop')" onmouseup="sendCommand('stop')">⬆️</button>
+        <button class="hidden"></button>
+
+        <button ontouchstart="sendCommand('izquierda')" onmousedown="sendCommand('izquierda')" 
+                ontouchend="sendCommand('stop')" onmouseup="sendCommand('stop')">⬅️</button>
+        <button ontouchstart="sendCommand('stop')" onmousedown="sendCommand('stop')" style="background:#cc0000;">⏹️</button>
+        <button ontouchstart="sendCommand('derecha')" onmousedown="sendCommand('derecha')" 
+                ontouchend="sendCommand('stop')" onmouseup="sendCommand('stop')">➡️</button>
+
+        <button class="hidden"></button>
+        <button ontouchstart="sendCommand('atras')" onmousedown="sendCommand('atras')" 
+                ontouchend="sendCommand('stop')" onmouseup="sendCommand('stop')">⬇️</button>
+        <button class="hidden"></button>
+    </div>
+
+    <button onclick="toggleMode()">Cambiar Modo (Manual/Auto)</button>
+
+    <script>
+        // 1. Conexión explícita. transports ayuda a evitar errores de protocolo
+        var socket = io({
+            transports: ['websocket', 'polling']
+        });
+
+        // Variable global para guardar la velocidad actual
+        var currentSpeed = document.getElementById("speedSlider").value;
+
+        socket.on('connect', function() {
+            document.getElementById("status").innerText = "Conectado ✅";
+            document.getElementById("status").style.color = "lime";
+        });
+
+        socket.on('disconnect', function() {
+            document.getElementById("status").innerText = "Desconectado ⚠️";
+            document.getElementById("status").style.color = "orange";
+        });
+
+        socket.on('connect_error', function(error) {
+            document.getElementById("status").innerText = "Error conexión ❌";
+            document.getElementById("status").style.color = "red";
+            console.error('Socket Error:', error);
+        });
+
+    // Esta función envía: "comando velocidad" (ej: "izquierda 1500")
+        function sendCommand(cmd) {
+            // 1. Leemos el valor ACTUAL del slider en el momento del click
+            var currentVal = document.getElementById("speedSlider").value;
+            
+            // 2. Creamos la frase
+            var mensaje = cmd + " " + currentVal;
+            
+            console.log("Enviando: " + mensaje);
+            socket.emit('comando', {data: mensaje});
+        }
+
+        // Esta función es opcional si ya envías la velocidad con el comando,
+        // pero es útil si quieres cambiar velocidad sin mover el robot.
+        function sendSpeed(val) {
+            document.getElementById("speedVal").innerText = val;
+            // socket.emit('velocidad', {data: val}); // Opcional
+        }
+        
+        function toggleMode() {
+            socket.emit('modo_switch');
+        }
+    </script>
+</body>
+</html>

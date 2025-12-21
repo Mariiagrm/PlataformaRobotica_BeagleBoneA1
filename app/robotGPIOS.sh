@@ -1,5 +1,12 @@
 #!/bin/bash
 #
+
+
+#----------------------------------------------------------
+# Pasar carpeta: scp -r ./SistemasEmpotrados_PlataformaRobotica debian@192.168.7.2:/home/debian/
+#----------------------------------------------------------
+
+
 # Script para habilitar GPIOs y PWMs de la configuración de las ruedas
 # Adaptado para un sistema de ficheros tipo /sys/class/gpio y /sys/class/pwm
 # (ej. BeagleBone Black u otros Linux embebidos).

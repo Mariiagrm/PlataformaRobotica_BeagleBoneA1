@@ -1,31 +1,28 @@
-import Adafruit_NIO.PWM as PWM
-import Adafruit_NIO.GPIO as GPIO
+from hal.gpio_sys import GpioSysfs as GPIO
+from  hal.pwm_sys import PwmSysfs as PWM
 
 class Motor:
-    def __init__(self, pwm_pin, in1_pin, in2_pin, frequency=1000):
+    def __init__(self, pin_pwm, pin_dirA, pin_dirB, pin_encoder, frequency=1000):
         """
         Inicializa el motor DC con control de velocidad y dirección.
-        :param pwm_pin: Pin PWM para control de velocidad.
-        :param in1_pin: Pin digital para dirección 1.
-        :param in2_pin: Pin digital para dirección 2.
+        :param pin_pwm: Pin PWM para control de velocidad.
+        :param pin_dirA: Pin digital para dirección 1.
+        :param pin_dirB: Pin digital para dirección 2.
         :param frequency: Frecuencia del PWM en Hz.
         """
-        self.pwm_pin = pwm_pin
-        self.in1_pin = in1_pin
-        self.in2_pin = in2_pin
-
+        
         # Configuración de pines como salida
-        GPIO.setup(self.in1_pin, GPIO.OUT)
-        GPIO.setup(self.in2_pin, GPIO.OUT)
-
-        # Inicializar el motor en estado de parada
-        GPIO.output(self.in1_pin, GPIO.LOW)
-        GPIO.output(self.in2_pin, GPIO.LOW)
-
+        self.gpio_dirA=GPIO(pin_dirA, "out")  # Configura el pin
+        self.gpio_dirA.write(0)              # Inicializa en bajo
+        self.gpio_dirB=GPIO(pin_dirB, "out")
+        self.gpio_dirB.write(0)              # Inicializa en bajo
+        self.gpio_encoder=GPIO(pin_encoder, "in")  # Configura el pin del encoder
         # Configuración del PWM
-        PWM.start(self.pwm_pin, 0, frequency)
+        self.periodo = 1000/frequency  # Periodo en ms
+        self.gpioPWM=PWM(pin_pwm,self.periodo, 0, 1)
 
-        print(f"Motor inicializado en pines PWM:{pwm_pin}, IN1:{in1_pin}, IN2:{in2_pin}")
+        self.pin_encoder=GPIO(pin_encoder, "in")
+        print(f"Motor inicializado en pines PWM:{pin_pwm}, IN1:{pin_dirA}, IN2:{pin_dirB}, ENC:{pin_encoder}")
     
     def set_speed(self, speed):
         """
@@ -33,31 +30,33 @@ class Motor:
         :param speed: Valor entre -100 (máximo reversa) y 100 (máximo adelante).
         """
         # Limitar el valor de speed entre -100 y 100
-        speed = max(min(speed, 100), -100)
+        #speed = max(min(speed, 100), -100)
 
         if speed > 0:
             # Movimiento hacia adelante
-            GPIO.output(self.in1_pin, GPIO.HIGH)
-            GPIO.output(self.in2_pin, GPIO.LOW)
-            duty_cycle = speed
+            self.gpio_dirA.write(1)
+            self.gpio_dirB.write(0)
+            duty_cycle=speed
         elif speed < 0:
             # Movimiento hacia atrás
-            GPIO.output(self.in1_pin, GPIO.LOW)
-            GPIO.output(self.in2_pin, GPIO.HIGH)
-            duty_cycle = abs(speed)  # El ciclo de trabajo siempre es positivo
+            self.gpio_dirA.write(0)
+            self.gpio_dirB.write(1)
+            duty_cycle=abs(speed)  # El ciclo de trabajo siempre es positivo
         else:
-            # Parada (Coast)
-            GPIO.output(self.in1_pin, GPIO.LOW)
-            GPIO.output(self.in2_pin, GPIO.LOW)
-            duty_cycle = 0
+            self.stop()
+            return
+ 
 
         # Aplicar el ciclo de trabajo al PWM
-        PWM.set_duty_cycle(self.pwm_pin, duty_cycle)
+        self.gpioPWM.set_duty_cycle(duty_cycle)
 
         print(f"Velocidad del motor establecida a {speed} (Duty Cycle: {duty_cycle}%)")
 
     def stop(self):
-        self.set_speed(0)
+        self.gpioPWM.set_duty_cycle(0)
+        self.gpio_dirA.write(0)
+        self.gpio_dirB.write(0)
+        
 
    
     def cleanup(self):
@@ -65,8 +64,8 @@ class Motor:
         Limpia los recursos del motor.
         """
         self.stop()
-        PWM.stop(self.pwm_pin)
-        PWM.cleanup()
-        GPIO.cleanup([self.in1_pin, self.in2_pin])
+        self.gpioPWM.cleanup()
+        self.gpio_dirA.cleanup()
+        self.gpio_dirB.cleanup()
         print("Recursos del motor limpiados.")
         

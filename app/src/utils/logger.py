@@ -1,6 +1,8 @@
 import json
 
-from src.drivers.motor_dc import Motor#, Sensor
+from drivers.motor_dc import Motor
+from drivers.sensor_dc import Sensor
+from drivers.coche_dc import Coche
 
 class Logger:
     @staticmethod
@@ -8,22 +10,31 @@ class Logger:
         # Carga de configuración desde un archivo JSON´
 
         configuracion = {}
-        with open(file_path, 'r') as f:
-            config = json.load(f)
-        for value in config.values():
-            if "motor" in value:
-                if "derecho" in value:
-                    m=Motor(value["pwm_pin"], value["in1_pin"], value["in2_pin"], value.get("frequency", 2000))
-                    configuracion["motorDerecho"] = m
-                elif "izquierdo" in value:
-                    m=Motor(value["pwm_pin"], value["in1_pin"], value["in2_pin"], value.get("frequency", 2000))
-                    configuracion["motorIzquierdo"] = m
-            elif "sensor" in value:
-                #Sensor(value["pin"], value.get("type", "digital"))
-                configuracion["sensorUltrasonido"] = m
+        try: 
+            with open(file_path, 'r') as f:
+                config = json.load(f)
+        except Exception as e:
+            print(f"Error al cargar el archivo de configuración: {e}")
+            newfile_path="src/config/settings.json"
+            with open(newfile_path, 'r') as f:
+                config = json.load(f)
+              
 
+    
+        for key, value in config.items():
+            if "motor" in key:
+                if "derecho" in key:
+                    m=Motor(value["pin_pwm"], value["pin_dirA"], value["pin_dirB"], value["pin_encoder"], value.get("frequency", 2000))
+                    configuracion["motor_derecho"] = m
+                elif "izquierdo" in key:
+                    m=Motor(value["pin_pwm"], value["pin_dirA"], value["pin_dirB"], value["pin_encoder"], value.get("frequency", 2000))
+                    configuracion["motor_izquierdo"] = m
+            elif "sensor" in key:
+                sensor=Sensor(value["pin_echo"], value["pin_trigger"])
+                configuracion["sensor_ultrasonido"] = sensor
 
-        return configuracion
+        coche = Coche(configuracion["motor_izquierdo"], configuracion["motor_derecho"], configuracion["sensor_ultrasonido"])
+        return coche
     
 
 

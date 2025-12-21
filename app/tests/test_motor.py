@@ -11,12 +11,12 @@ sys.path.insert(0, root_dir)
 from src.utils.logger import Logger
  
 
-from src.drivers.motor_dc import MotorDC
+from src.drivers.motor_dc import Motor
 
 def test_motor_derecho():
-    configuracion=Logger.load_config("config/motor_config.json")
+    configuracion=Logger.load_config("config/settings.json")
     motor_derecho= configuracion["motorDerecho"]
-    #motor_izquierdo= configuracion["motorIzquierdo"]
+    motor_izquierdo= configuracion["motorIzquierdo"]
     
     try:
         print("Probando motor derecho")
@@ -29,7 +29,7 @@ def test_motor_derecho():
         time.sleep(2)
 
         print("Parada")
-        motor_derecho.stop()
+        motor_derecgirar_eje_derechaho.stop()
         time.sleep(1)
 
         print("Frenado")
@@ -41,3 +41,4 @@ def test_motor_derecho():
 
 
     
+configuracion=Logger.load_config("config/settings.json")
