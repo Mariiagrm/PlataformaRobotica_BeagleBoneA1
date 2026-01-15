@@ -11,14 +11,31 @@
         button:active { background: #df7edf; }
         .hidden { visibility: hidden; }
         #status { margin-top: 20px; color: lime; }
+        
+        /* Estilo para la caja del sensor */
+        .sensor-box {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px auto;
+            width: 200px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
     <h1>Robot Maria y Okeolesandra</h1>
+
+    <div class="sensor-box">
+        <h3>Distancia</h3>
+        <p style="font-size: 24px; font-weight: bold;">
+            <span id="distVal">--</span> cm
+        </p>
+    </div>
     <h3 id="status">Conectando...</h3>
     
-    <input type="range" min="0" max="2000" value="50" id="speedSlider" onchange="sendSpeed(this.value)">
-    <p>Velocidad: <span id="speedVal">1000</span>%</p>
+    <input type="range" min="0" max="100" value="50" id="speedSlider" onchange="sendSpeed(this.value)">   
+    <p>Velocidad: <span id="speedVal">50</span>%</p>
 
     <div class="container">
         <button class="hidden"></button>
@@ -41,12 +58,10 @@
     <button onclick="toggleMode()">Cambiar Modo (Manual/Auto)</button>
 
     <script>
-        // 1. Conexión explícita. transports ayuda a evitar errores de protocolo
         var socket = io({
             transports: ['websocket', 'polling']
         });
 
-        // Variable global para guardar la velocidad actual
         var currentSpeed = document.getElementById("speedSlider").value;
 
         socket.on('connect', function() {
@@ -65,23 +80,32 @@
             console.error('Socket Error:', error);
         });
 
-    // Esta función envía: "comando velocidad" (ej: "izquierda 1500")
+        // ACTUALIZACIÓN DEL VALOR DEL SENSOR
+        socket.on('sensor_update', function(msg) {
+            var distancia = parseFloat(msg.distancia).toFixed(1); 
+            
+            var display = document.getElementById("distVal");
+            if(display) {
+                display.innerText = distancia;
+                
+                // Cambio de color visual si está muy cerca (< 20cm)
+                if (distancia < 20 && distancia > 0) {
+                    display.style.color = "red";
+                } else {
+                    display.style.color = "black";
+                }
+            }
+        });
+
         function sendCommand(cmd) {
-            // 1. Leemos el valor ACTUAL del slider en el momento del click
             var currentVal = document.getElementById("speedSlider").value;
-            
-            // 2. Creamos la frase
             var mensaje = cmd + " " + currentVal;
-            
             console.log("Enviando: " + mensaje);
             socket.emit('comando', {data: mensaje});
         }
 
-        // Esta función es opcional si ya envías la velocidad con el comando,
-        // pero es útil si quieres cambiar velocidad sin mover el robot.
         function sendSpeed(val) {
             document.getElementById("speedVal").innerText = val;
-            // socket.emit('velocidad', {data: val}); // Opcional
         }
         
         function toggleMode() {

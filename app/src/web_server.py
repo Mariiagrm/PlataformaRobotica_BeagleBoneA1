@@ -63,12 +63,40 @@ def handle_mode():
         print(f"[WEB] Modo cambiado a {new_mode}")
 
 
+# Función que se ejecutará en segundo plano
+def broadcast_sensor_data():
+    """Envía los datos del sensor a todos los clientes conectados cada 0.5s"""
+    while True:
+        if robot_shared_state:
+            # Obtenemos el estado. Ahora devuelve 4 valores.
+            # mode, command, speed, distance
+            state = robot_shared_state.get_state()
+            dist = state[3] # El cuarto elemento es la distancia
+            
+            # Emitimos el evento 'sensor_update'
+            socketio.emit('sensor_update', {'distancia': dist})
+            
+        socketio.sleep(0.5) # Espera no bloqueante
+
 def start_server(state_instance):
     global robot_shared_state
     robot_shared_state = state_instance
-    # host='0.0.0.0' hace que sea accesible desde otros dispositivos en la red
-    # SoftAp0: 192.168.8.1
+    socketio.start_background_task(broadcast_sensor_data)
+    eventlet.wsgi.server(eventlet.listen(('', 5000)), server_app)
 
-    #socketio.run(server_app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
-    #Permite multiples conexiones simultáneas con eventlet
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), server_app)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    

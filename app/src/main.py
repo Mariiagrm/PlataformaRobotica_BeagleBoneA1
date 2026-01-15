@@ -4,11 +4,8 @@ import time
 from drivers.coche_dc import Coche
 from  utils.logger import Logger
 from utils.robot_state import RobotState
-from web_server import start_server, robot_shared_state
+#from web_server import start_server, robot_shared_state
 
-# Asumimos que estas son tus clases ya creadas
-# from drivers.coche_dc import Coche 
-# from utils.logger import Logger
 
 # --- CLASE DE ESTADO COMPARTIDO ---
 
@@ -75,7 +72,17 @@ def robot_logic_thread(shared_state, robot):
     
     while shared_state.running:
         # 1. Leer estado actual
-        mode, cmd, speed = shared_state.get_state()
+        mode, cmd, speed, distance = shared_state.get_state()
+
+    
+        try:
+            # Medimos distancia siempre (o puedes poner un if mode != 'STOP')
+            dist = robot.medir_distancia()
+            if dist is not None:
+                # Guardamos la distancia en la memoria compartida
+                shared_state.update(distance=dist)
+        except Exception as e:
+            print(f"Error midiendo distancia: {e}")
         
         # 2. Solo imprimimos si el modo ha cambiado (Para limpiar la consola)
         if mode != last_mode:
@@ -112,9 +119,9 @@ def robot_logic_thread(shared_state, robot):
                     #random elección de giro
                     import random
                     if random.choice([True, False]):
-                        robot.girar_izquierda(50)
+                        robot.girar_izquierda_endoder(speed)
                     else:
-                        robot.girar_derecha(50)
+                        robot.girar_derecha_endoder(speed)
 
                 else:
                     robot.avanzar(speed)
@@ -131,33 +138,37 @@ def robot_logic_thread(shared_state, robot):
 
 # --- MAIN ---
 def main():
-    # 1. Cargar Configuración
-    coche = Logger.load_config("./config/settings.json")
-    
-    # 2. Inicializar Hardware (Mock o Real)
-    robot = coche  # Asumimos que Logger devuelve un objeto Coche ya inicializado
-    
+    from web_server import start_server, robot_shared_state
 
+    print("Iniciando Robot...")
 
-    # 4. Crear Hilos
-    # Hilo de lógica (Daemon = se cierra si el programa principal se cierra a la fuerza)
-    thread_logic = threading.Thread(target=robot_logic_thread, args=(robot_shared_state, robot))
-    thread_logic.daemon = True 
-    
-    # 5. Arrancar
-    thread_logic.start()
-    print("-------Servidor web arrancado-------")
-    print("Accede a la interfaz web en: http://192.168.8.1:5000")
-    start_server(robot_shared_state) #ImportError: cannot import name 'start_server' from 'web_server' (/home/debian/app/src/web_server.py)
+    # 2. Cargar Configuración y Hardware
+    try:
+        robot = Logger.load_config("./config/settings.json")
+    except Exception as e:
+        print(f"Error cargando config: {e}")
+        return
 
+    # 3. Arrancar Hilo de Lógica
+    t_logic = threading.Thread(target=robot_logic_thread, args=(robot_shared_state, robot))
+    t_logic.daemon = True # Se cerrará si el main se cierra
+    t_logic.start()
+
+    # 4. Arrancar Servidor Web 
+    # Lo lanzamos en un hilo aparte para que no detenga el programa aquí.
+    print("Lanzando servidor web...")
+    t_server = threading.Thread(target=start_server, args=(robot_shared_state,))
+    t_server.daemon = True
+    t_server.start()
     
-    # El hilo de consola corre en el hilo principal (Main Thread)
-    # porque 'input()' a veces da problemas en hilos secundarios.
+    print(f"Web disponible en: http://192.168.8.1:5000")
+
+    # 5. Bucle Principal (Consola)
+    # Este hilo se queda aquí esperando  comandos.
     console_thread(robot_shared_state)
 
-    # 6. Esperar a que termine la lógica (cuando user escribe 'salir')
-    thread_logic.join()
-    print("Programa terminado.")
+    print("Main cerrado.")
+    # Al salir de console_thread, el programa termina y mata a los daemons (web y logic)
 
 if __name__ == "__main__":
     main()
